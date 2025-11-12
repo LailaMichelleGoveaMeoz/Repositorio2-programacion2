@@ -180,6 +180,30 @@ bool validarHora(const char* hora) {
     return true;
 }
 
+//horario ocupado
+bool horarioOcupado(int idDoctor, const char* fecha, const char* hora) {
+    ifstream archivo("citas.bin", ios::binary);
+    if (!archivo.is_open()) return false;
+
+    ArchivoHeader header;
+    archivo.read((char*)&header, sizeof(header));
+
+    Cita c;
+    for (int i = 0; i < header.cantidadRegistros; i++) {
+        archivo.read((char*)&c, sizeof(Cita));
+        if (!c.atendida && strcmp(c.estado, "Pendiente") == 0 &&
+            c.idDoctor == idDoctor &&
+            strcmp(c.fecha, fecha) == 0 &&
+            strcmp(c.hora, hora) == 0) {
+            archivo.close();
+            return true;
+        }
+    }
+
+    archivo.close();
+    return false;
+}
+
 //Verificacion para saber si la cedua existe
 bool cedulaExiste(const char* cedulaBuscada) {
     fstream archivo("pacientes.bin", ios::binary | ios::in);
@@ -219,6 +243,22 @@ bool verificarArchivo(const char* nombreArchivo) {
     archivo.close();
 
     return header.version == 1;
+}
+
+//Verificar header
+bool verificarHeader(const char*nombreArchivo ) {
+    ifstream archivo( nombreArchivo ,ios::binary | ios::in);
+    if (!archivo.is_open()) {
+        return false;
+    }
+    ArchivoHeader header;
+    archivo.read(reinterpret_cast<char*>(&header), sizeof(ArchivoHeader));
+    archivo.close();
+    if (archivo.fail() || header.version != 1) {
+        
+        return false;
+    }
+    return true;
 }
 
 //Inicializar archivo
@@ -283,6 +323,16 @@ int buscarIndicePorID(const char* nombreArchivo, int idBuscado, size_t tamRegist
     delete[] buffer;
     archivo.close();
     return -1;
+}
+
+//Mostrar header
+void mostrarHeader(const char* nombreArchivo) {
+    ArchivoHeader header = leerHeader(nombreArchivo);
+    cout << "\n--- Header de " << nombreArchivo << " ---\n";
+    cout << "Cantidad de registros: " << header.cantidadRegistros << "\n";
+    cout << "Próximo ID: " << header.proximoID << "\n";
+    cout << "Registros activos: " << header.registrosActivos << "\n";
+    cout << "Versión: " << header.version << "\n";
 }
 
 //Agregar registro
@@ -369,6 +419,23 @@ void listarRegistrosActivos(const char* nombreArchivo) {
         }
     }
     archivo.close();
+}
+
+//PACIENTES
+
+//Reiniciar el archivo de pacientes
+void reiniciarArchivoPacientes() {
+    ofstream archivo("pacientes.bin", ios::binary | ios::trunc);
+    if (!archivo.is_open()) {
+        cerr << "No se pudo crear pacientes.bin\n";
+        return;
+    }
+
+    ArchivoHeader header = {0, 1, 0, 1}; // Reinicia contador de ID
+    archivo.write((char*)&header, sizeof(header));
+    archivo.close();
+
+    cout << "Archivo pacientes.bin reiniciado. Todos los registros fueron eliminados.\n";
 }
 
 //Agregar paciente
@@ -533,21 +600,7 @@ void actualizarPacienteInteractivo() {
     }
 }
 
-//Reiniciar el archivo de pacientes
-void reiniciarArchivoPacientes() {
-    std::ofstream archivo("pacientes.bin", std::ios::binary | std::ios::trunc);
-    if (!archivo.is_open()) {
-        std::cerr << "No se pudo crear pacientes.bin\n";
-        return;
-    }
-
-    ArchivoHeader header = {0, 1, 0, 1}; // Reinicia contador de ID
-    archivo.write((char*)&header, sizeof(header));
-    archivo.close();
-
-    std::cout << "Archivo pacientes.bin reiniciado. Todos los registros fueron eliminados.\n";
-}
-
+//reordenar pacientes
 void reordenarPacientes() {
     ifstream archivoOriginal("pacientes.bin", ios::binary);
     if (!archivoOriginal.is_open()) {
@@ -594,6 +647,20 @@ void reordenarPacientes() {
     archivoNuevo.close();
 
     cout << "Pacientes reordenados automáticamente. Próximo ID: " << nuevoHeader.proximoID << "\n";
+}
+
+//eliminar paciente
+void eliminarPacienteInteractivo() {
+    int id;
+    cout << "ID del paciente a eliminar: ";
+    cin >> id;
+
+    if (eliminarRegistro<Paciente>("pacientes.bin", id)) {
+        cout << "Paciente eliminado lógicamente.\n";
+        reordenarPacientes(); // ? ¡Aquí se reorganiza automáticamente!
+    } else {
+        cout << "No se pudo eliminar.\n";
+    }
 }
 
 
