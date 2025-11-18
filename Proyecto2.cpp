@@ -244,17 +244,18 @@ bool cedulaExiste(const char* cedulaBuscada) {
             archivo.close();
             return true;
         }
-    }
+    }// streampos almecena una posicion
 
     archivo.close();
     return false;// me daje registrar el paciente si no se encuentra en el sistema
 }
 
 
+
 // === FUNCIONES DE ARCHIVO Y ACCESO ALEATORIO ===
 
 //Inicializar archivo
-bool inicializarArchivo(const char* nombreArchivo) { //abro el archivo que quiero
+bool inicializarArchivo(const char* nombreArchivo) { //abro el archivo que quiero, parametros iniciales del heather
     ofstream archivo(nombreArchivo, ios::binary);//lo abro en modo bianrio
     if (!archivo.is_open()) return false;
 
@@ -289,7 +290,7 @@ ArchivoHeader leerHeader(const char* nombreArchivo) {
 
 //Actualizar header
 bool actualizarHeader(const char* nombreArchivo, const ArchivoHeader& header) {
-    fstream archivo(nombreArchivo, std::ios::binary | ios::in | ios::out);// abro el archivo para leer y escribir
+    fstream archivo(nombreArchivo, ios::binary | ios::in | ios::out);// abro el archivo para leer y escribir
     if (!archivo.is_open()) return false;
 
     archivo.seekp(0);// el puntero de escritura se pone en la posicion 0
@@ -299,13 +300,13 @@ bool actualizarHeader(const char* nombreArchivo, const ArchivoHeader& header) {
 }
 
 //Calcular posicion
-streampos calcularPosicion(int indice, size_t tamRegistro) {
+streampos calcularPosicion(int indice, size_t tamRegistro) {// sterampos guarda la poscicion del archivo
     return sizeof(ArchivoHeader) + indice * tamRegistro;// tamano del header mas la multiplicacion de la posicion por el tamano del tipo de dato
 }
 
 //Buscar indice por id
 int buscarIndicePorID(const char* nombreArchivo, int idBuscado, size_t tamRegistro) {
-    std::ifstream archivo(nombreArchivo, std::ios::binary);// abre el archivo en modo de lectura
+   ifstream archivo(nombreArchivo, ios::binary);// abre el archivo en modo de lectura
     if (!archivo.is_open()) return -1;// si el archivo no esta abierto se retorna -1 indicando que hay un error
 
     ArchivoHeader header;
@@ -317,7 +318,7 @@ int buscarIndicePorID(const char* nombreArchivo, int idBuscado, size_t tamRegist
         int id;
         memcpy(&id, buffer, sizeof(int));// me pasa los primeros 4 bytes del buffer al id
         bool eliminado;//verfico los espacios eliminados
-        memcpy(&eliminado, buffer + tamRegistro - sizeof(bool) - sizeof(time_t)*2, sizeof(bool));//calculo la posicion del campo eliminado
+        memcpy(&eliminado, buffer + tamRegistro - sizeof(bool) - sizeof(time_t)*2, sizeof(bool));//guarda los bytes que calcula
         if (id == idBuscado && !eliminado) {
             delete[] buffer;
             archivo.close();
@@ -342,7 +343,7 @@ void mostrarHeader(const char* nombreArchivo) {
 //Agregar registro
 template<typename T>// me permite trabajar con cualquier tipo de registro
 bool agregarRegistro(const char* nombreArchivo, T& nuevo) {// esto me permite trabajar con el dato original t& nuevo
-    ArchivoHeader header = leerHeader(nombreArchivo);
+    ArchivoHeader header = leerHeader(nombreArchivo);//tiene que ser el heather del archivo que estoy usanso
 
     nuevo.id = header.proximoID;     // ? Asigna el ID actual
     header.proximoID++;              // ? Aumenta para el siguiente
@@ -373,7 +374,7 @@ bool actualizarRegistro(const char* nombreArchivo, const T& modificado) {
     if (!archivo.is_open()) return false;
 
     archivo.seekp(calcularPosicion(indice, sizeof(T)));//mueve el puntero de escritura hasta la posicion que quiero modificar
-    archivo.write((char*)&modificado, sizeof(T));
+    archivo.write((char*)&modificado, sizeof(T));//escribo modificacion de los datos
     archivo.close();
     return true;
 }
@@ -1547,7 +1548,7 @@ void compactarArchivo(const char* nombreArchivo, size_t tamanoRegistro) {
 
     ofstream salidaTemp("temp_compactado.bin", ios::binary | ios::trunc);
     if (!salidaTemp.is_open()) {
-        std::cerr << "No se pudo crear archivo temporal.\n";
+       cerr << "No se pudo crear archivo temporal.\n";
         entrada.close();//original
         return;
     }
@@ -1671,8 +1672,8 @@ cin.ignore();
 cout << "Ingrese la cédula del nuevo paciente: ";
 cin.getline(cedula, 20);
 cin.ignore();
-if (cedulaExiste(cedula)) {
-cout << "Ya existe un paciente registrado con esa cédula.\n";
+      if (cedulaExiste(cedula)) {
+   cout << "Ya existe un paciente registrado con esa cédula.\n";
 break;
 }
 // Si no existe, continúa con el registro
@@ -1790,9 +1791,6 @@ void menuDoctores() {
     }
     break;
 }
-
-
-
                 
             case 6:
                 listarRegistrosActivos<Doctor>("doctores.bin");
@@ -1929,7 +1927,7 @@ int main() {
     // Archivos que usará el sistema
     const char* archivos[] = {
         "hospital.bin", "pacientes.bin", "doctores.bin", "citas.bin", "historiales.bin"
-    };
+    };//arreglo de archivo para inicializarlo, crear los heathers, aplico funciones que inicializan los heathers
 
     // Verificar e inicializar cada archivo si no existe
     for (const char* nombre : archivos) {
@@ -1945,18 +1943,21 @@ int main() {
 
 
     // Cargar datos del hospital
-    Hospital* hospital = new Hospital;
+    Hospital* hospital = new Hospital; // para yo poder usarlo durante todo el codigo
     ifstream archivoHospital("hospital.bin", ios::binary);
     if (archivoHospital.is_open()) {
         archivoHospital.read((char*)hospital, sizeof(Hospital));
         archivoHospital.close();
     } else {
-        std::cerr << "Error al cargar datos del hospital.\n";
+      cerr << "Error al cargar datos del hospital.\n";
         delete hospital;
         return 1;
     }
 
     // Mostrar datos básicos del hospital
+    strcpy(hospital->nombre, "Hospital Universitario de Caracas");
+strcpy(hospital->direccion, "Av. Minerva, UCV Caracas, Distrito Capital (Venezuela), 1040");
+strcpy(hospital->telefono, "04126067652");
     cout << "\n=== BIENVENIDO AL SISTEMA HOSPITALARIO ===\n";
     cout << "Hospital: " << hospital->nombre << "\n";
     cout << "Dirección: " << hospital->direccion << "\n";
